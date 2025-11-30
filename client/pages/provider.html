@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Profile - Smart Appointments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-gray-50">
+  <nav class="bg-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="../index.html" class="flex items-center space-x-2">
+        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <span class="text-white font-bold">📅</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Smart Appointments</h1>
+      </a>
+      <div class="flex items-center gap-4">
+        <span class="text-gray-600" id="userName"></span>
+        <button onclick="logout()" class="btn btn-danger btn-sm">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold mb-8 text-gray-800">Provider Setup</h1>
+
+    <div id="errorAlert"></div>
+    <div id="successAlert"></div>
+
+    <!-- Create Profile Section -->
+    <div class="card mb-8">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">Create Your Provider Profile</h2>
+      </div>
+      <div class="card-body">
+        <form id="profileForm" class="space-y-6">
+          <div class="form-group">
+            <label for="title" class="form-label">Professional Title</label>
+            <input
+              type="text"
+              id="title"
+              class="form-input"
+              placeholder="e.g., Cardiologist, Dentist, Dermatologist"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="specialties" class="form-label">Specialties (comma-separated)</label>
+            <input
+              type="text"
+              id="specialties"
+              class="form-input"
+              placeholder="e.g., Heart Disease, Preventive Care, Surgery"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Services</label>
+            <div id="servicesContainer" class="space-y-4">
+              <div class="service-item p-4 border border-gray-200 rounded bg-gray-50">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label class="text-sm font-medium block mb-1">Service Name</label>
+                    <input type="text" class="form-input service-name" placeholder="e.g., 30-min Consultation" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium block mb-1">Duration (minutes)</label>
+                    <input type="number" class="form-input service-duration" placeholder="30" min="15" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium block mb-1">Price (₹)</label>
+                    <input type="number" class="form-input service-price" placeholder="500" min="0" step="1" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" onclick="addServiceField()" class="btn btn-primary btn-sm mt-4">
+              + Add Another Service
+            </button>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-md w-full">
+            Create Profile
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Slots Section -->
+    <div class="card" id="slotsSection" style="display: none;">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">Manage Your Appointment Slots</h2>
+      </div>
+      <div class="card-body">
+        <form id="slotsForm" class="space-y-6">
+          <div class="form-group">
+            <label class="form-label">Add Availability Slots</label>
+            <div id="slotsContainer" class="space-y-4">
+              <div class="slot-item p-4 border border-gray-200 rounded bg-gray-50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="text-sm font-medium block mb-1">Start Date & Time</label>
+                    <input type="datetime-local" class="form-input slot-start" required />
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium block mb-1">End Date & Time</label>
+                    <input type="datetime-local" class="form-input slot-end" required />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" onclick="addSlotField()" class="btn btn-primary btn-sm mt-4">
+              + Add Another Slot
+            </button>
+          </div>
+
+          <button type="submit" class="btn btn-success btn-md w-full">
+            Add Slots
+          </button>
+        </form>
+
+        <!-- Existing Slots Table -->
+        <div class="mt-8">
+          <h3 class="text-xl font-bold mb-4">Your Current Slots</h3>
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="slotsTableBody">
+                <tr>
+                  <td colspan="3" class="text-center text-gray-500">Loading slots...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js?v=1.1"></script>
+  <script src="../js/provider.js?v=1.1"></script>
+  <script>
+    // Check authentication
+    requireAuth();
+
+    if (!isProvider()) {
+      window.location.href = 'login.html?error=provider_only';
+    }
+
+    const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
+    document.getElementById('userName').textContent = `👤 ${userName}`;
+
+    let providerId = null;
+
+    // Load existing profile if it exists
+    async function loadExistingProfile() {
+      try {
+        const profile = await getOwnProviderProfile();
+        if (profile && profile.isOwn) {
+          providerId = profile.id;
+          localStorage.setItem('providerId', providerId);
+
+          // Fill the form with existing data
+          document.getElementById('title').value = profile.title || '';
+          document.getElementById('specialties').value = profile.specialties.join(', ') || '';
+
+          // Fill services
+          const servicesContainer = document.getElementById('servicesContainer');
+          servicesContainer.innerHTML = '';
+          if (profile.services && profile.services.length > 0) {
+            profile.services.forEach((service) => {
+              const html = `
+                <div class="service-item p-4 border border-gray-200 rounded bg-gray-50">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label class="text-sm font-medium block mb-1">Service Name</label>
+                      <input type="text" class="form-input service-name" value="${service.name || ''}" placeholder="e.g., 30-min Consultation" />
+                    </div>
+                    <div>
+                      <label class="text-sm font-medium block mb-1">Duration (minutes)</label>
+                      <input type="number" class="form-input service-duration" value="${service.durationMinutes || 30}" placeholder="30" min="15" />
+                    </div>
+                    <div>
+                      <label class="text-sm font-medium block mb-1">Price (₹)</label>
+                      <input type="number" class="form-input service-price" value="${service.price || 0}" placeholder="500" min="0" step="1" />
+                    </div>
+                  </div>
+                </div>
+              `;
+              servicesContainer.insertAdjacentHTML('beforeend', html);
+            });
+          }
+
+          // Change button text to "Update Profile"
+          const btn = profileForm.querySelector('button');
+          btn.textContent = 'Update Profile';
+
+          // Show success message
+          document.getElementById('successAlert').innerHTML =
+            '<div class="alert alert-success">✅ Profile loaded! You can now update it or add more availability slots.</div>';
+          
+          // KEEP the profile form VISIBLE for editing
+          document.getElementById('profileForm').style.display = 'block';
+          document.getElementById('slotsSection').style.display = 'block';
+
+          // Load existing slots
+          loadSlots();
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    }
+
+    // Initialize by loading existing profile
+    loadExistingProfile();
+
+    // Add service field
+    function addServiceField() {
+      const container = document.getElementById('servicesContainer');
+      const html = `
+        <div class="service-item p-4 border border-gray-200 rounded bg-gray-50">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="text-sm font-medium block mb-1">Service Name</label>
+              <input type="text" class="form-input service-name" placeholder="e.g., 30-min Consultation" />
+            </div>
+            <div>
+              <label class="text-sm font-medium block mb-1">Duration (minutes)</label>
+              <input type="number" class="form-input service-duration" placeholder="30" min="15" />
+            </div>
+            <div>
+              <label class="text-sm font-medium block mb-1">Price (₹)</label>
+              <input type="number" class="form-input service-price" placeholder="500" min="0" step="1" />
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // Add slot field
+    function addSlotField() {
+      const container = document.getElementById('slotsContainer');
+      const html = `
+        <div class="slot-item p-4 border border-gray-200 rounded bg-gray-50">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm font-medium block mb-1">Start Date & Time</label>
+              <input type="datetime-local" class="form-input slot-start" required />
+            </div>
+            <div>
+              <label class="text-sm font-medium block mb-1">End Date & Time</label>
+              <input type="datetime-local" class="form-input slot-end" required />
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // Create profile form
+    const profileForm = document.getElementById('profileForm');
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById('title').value;
+      const specialties = document.getElementById('specialties').value;
+
+      const services = Array.from(document.querySelectorAll('.service-item')).map((item) => ({
+        name: item.querySelector('.service-name').value,
+        durationMinutes: parseInt(item.querySelector('.service-duration').value),
+        price: parseFloat(item.querySelector('.service-price').value),
+      }));
+
+      const errorAlert = document.getElementById('errorAlert');
+      const btn = profileForm.querySelector('button');
+      const originalText = btn.textContent;
+
+      // Validate
+      if (!title || !specialties || services.length === 0) {
+        errorAlert.innerHTML = '<div class="alert alert-error">❌ Please fill all fields</div>';
+        return;
+      }
+
+      if (services.some((s) => !s.name || !s.durationMinutes || !s.price)) {
+        errorAlert.innerHTML = '<div class="alert alert-error">❌ Complete all service details</div>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Creating...';
+
+      try {
+        const profile = await createProviderProfile(title, specialties, services);
+        providerId = profile._id;
+
+        localStorage.setItem('providerId', providerId);
+
+        const message = '✅ Profile updated successfully!';
+        document.getElementById('successAlert').innerHTML =
+          `<div class="alert alert-success">${message} You can continue to add or update availability slots below.</div>`;
+
+        // Keep form visible for further edits
+        document.getElementById('profileForm').style.display = 'block';
+        document.getElementById('slotsSection').style.display = 'block';
+
+        loadSlots();
+      } catch (error) {
+        errorAlert.innerHTML = `<div class="alert alert-error">❌ ${error.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+
+    // Add slots form
+    const slotsForm = document.getElementById('slotsForm');
+    slotsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const slots = Array.from(document.querySelectorAll('.slot-item')).map((item) => ({
+        start: item.querySelector('.slot-start').value,
+        end: item.querySelector('.slot-end').value,
+      }));
+
+      const errorAlert = document.getElementById('errorAlert');
+      const btn = slotsForm.querySelector('button');
+      const originalText = btn.textContent;
+
+      if (slots.length === 0 || slots.some((s) => !s.start || !s.end)) {
+        errorAlert.innerHTML = '<div class="alert alert-error">❌ Fill all slot dates and times</div>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Adding slots...';
+
+      try {
+        const pId = providerId || localStorage.getItem('providerId');
+        await addSlots(pId, slots);
+
+        document.getElementById('successAlert').innerHTML =
+          '<div class="alert alert-success">✅ Slots added successfully!</div>';
+
+        slotsForm.reset();
+        loadSlots();
+      } catch (error) {
+        errorAlert.innerHTML = `<div class="alert alert-error">❌ ${error.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+
+    // Load existing slots
+    async function loadSlots() {
+      const pId = providerId || localStorage.getItem('providerId');
+      if (!pId) return;
+
+      try {
+        const data = await getProviderData(pId);
+        const tableBody = document.getElementById('slotsTableBody');
+
+        if (!data.availableSlots || data.availableSlots.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500">No slots yet. Add some!</td></tr>';
+          return;
+        }
+
+        tableBody.innerHTML = data.availableSlots
+          .map((slot) => {
+            const start = new Date(slot.start).toLocaleString();
+            const end = new Date(slot.end).toLocaleString();
+            return `
+            <tr>
+              <td>${start}</td>
+              <td>${end}</td>
+              <td><span class="badge badge-success">Available</span></td>
+            </tr>
+          `;
+          })
+          .join('');
+      } catch (error) {
+        console.error('Error loading slots:', error);
+      }
+    }
+
+    // Initialize
+    async function init() {
+      const pId = localStorage.getItem('providerId');
+      if (pId) {
+        providerId = pId;
+        profileForm.style.display = 'none';
+        document.getElementById('slotsSection').style.display = 'block';
+        loadSlots();
+      }
+    }
+
+    init();
+
+    // Reload slots every 5 seconds
+    setInterval(loadSlots, 5000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Appointment - Smart Appointments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-gray-50">
+  <nav class="bg-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="../index.html" class="flex items-center space-x-2">
+        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <span class="text-white font-bold">📅</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Smart Appointments</h1>
+      </a>
+      <div class="flex items-center gap-4">
+        <span class="text-gray-600" id="userName"></span>
+        <a href="patient-dashboard.html" class="text-gray-600 hover:text-gray-800">My Appointments</a>
+        <button onclick="logout()" class="btn btn-danger btn-sm">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold mb-8 text-gray-800">📅 Book Appointment</h1>
+
+    <div id="errorAlert"></div>
+    <div id="successAlert"></div>
+
+    <!-- Step 1: Select Provider -->
+    <div class="card mb-8" id="step1">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">Step 1: Choose a Provider</h2>
+      </div>
+      <div class="card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="providersList">
+          <div class="text-center text-gray-500 py-12">Loading providers...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Select Slot -->
+    <div class="card mb-8" id="step2" style="display: none;">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">Step 2: Choose Date & Time</h2>
+      </div>
+      <div class="card-body">
+        <div class="mb-6">
+          <button class="btn btn-secondary btn-md" onclick="goBack()">← Back to Providers</button>
+        </div>
+
+        <div id="selectedProviderInfo" class="bg-blue-50 p-4 rounded mb-6"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="slotsList">
+          <div class="text-center text-gray-500 py-12 col-span-full">Loading available slots...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Confirm Booking -->
+    <div class="card" id="step3" style="display: none;">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">Step 3: Confirm Booking</h2>
+      </div>
+      <div class="card-body">
+        <div class="mb-6">
+          <button class="btn btn-secondary btn-md" onclick="goBackToSlots()">← Back to Slots</button>
+        </div>
+
+        <div class="bg-gray-50 p-6 rounded-lg mb-6 border border-gray-200">
+          <h3 class="text-lg font-bold mb-4">Booking Summary</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Provider:</span>
+              <span class="font-semibold" id="summaryProvider">—</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Date & Time:</span>
+              <span class="font-semibold" id="summaryDateTime">—</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Duration:</span>
+              <span class="font-semibold" id="summaryDuration">—</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Price:</span>
+              <span class="font-semibold" id="summaryPrice">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="notes" class="form-label">Additional Notes (Optional)</label>
+          <textarea
+            id="notes"
+            class="form-textarea"
+            placeholder="Any special requests or medical information..."
+          ></textarea>
+        </div>
+
+        <button class="btn btn-success btn-lg w-full" id="confirmBookBtn">
+          ✓ Confirm Booking
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="successModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">✅ Booking Successful!</h3>
+      </div>
+      <div class="modal-body">
+        <p class="text-gray-700 mb-4">Your appointment has been booked successfully.</p>
+        <p class="text-sm text-gray-600">The provider will confirm your appointment shortly. You'll receive an email notification.</p>
+      </div>
+      <div class="modal-footer">
+        <a href="patient-dashboard.html" class="btn btn-primary">View My Appointments</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js?v=1.1"></script>
+  <script src="../js/patient.js?v=1.1"></script>
+  <script>
+    // Check authentication
+    requireAuth();
+
+    if (!isPatient()) {
+      window.location.href = 'login.html?error=patient_only';
+    }
+
+    const userName = localStorage.getItem('userName');
+    document.getElementById('userName').textContent = `👤 ${userName}`;
+
+    let selectedProvider = null;
+    let selectedSlot = null;
+
+    // Load providers
+    async function loadProviders() {
+      try {
+        const providers = await listProviders();
+
+        const providersList = document.getElementById('providersList');
+        if (providers.length === 0) {
+          providersList.innerHTML = '<div class="col-span-full text-center text-gray-500">No providers available</div>';
+          return;
+        }
+
+        providersList.innerHTML = providers
+          .map(
+            (p) => `
+          <div class="card p-6 hover:shadow-lg transition">
+            <div class="text-4xl mb-2">👨‍⚕️</div>
+            <h3 class="font-bold text-lg mb-1">${p.name}</h3>
+            <p class="text-gray-600 text-sm mb-2">${p.title}</p>
+            <p class="text-xs text-gray-500">${p.specialties.join(', ')}</p>
+            <div class="mt-4 text-center">
+              <button class="btn btn-primary btn-sm w-full" onclick="selectProvider('${p.id}', '${p.name}', '${p.title}'); return false;">
+                Select →
+              </button>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      } catch (error) {
+        console.error('Error loading providers:', error);
+        document.getElementById('errorAlert').innerHTML =
+          '<div class="alert alert-error">❌ Error loading providers</div>';
+      }
+    }
+
+    // Select provider
+    async function selectProvider(providerId, providerName, providerTitle) {
+      try {
+        const provider = await getProviderAvailability(providerId);
+        selectedProvider = provider;
+
+        // Show step 2
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'block';
+        document.getElementById('step3').style.display = 'none';
+
+        // Show provider info
+        document.getElementById('selectedProviderInfo').innerHTML = `
+          <h3 class="font-bold text-lg mb-2">${providerName}</h3>
+          <p class="text-gray-600">${providerTitle}</p>
+          <p class="text-sm text-gray-500 mt-2">Services available: ${provider.services.map((s) => s.name).join(', ')}</p>
+        `;
+
+        // Load slots
+        loadSlots(provider);
+      } catch (error) {
+        console.error('Error selecting provider:', error);
+        document.getElementById('errorAlert').innerHTML =
+          '<div class="alert alert-error">❌ Error loading provider details</div>';
+      }
+    }
+
+    // Load slots
+    function loadSlots(provider) {
+      const slotsList = document.getElementById('slotsList');
+
+      if (!provider.availableSlots || provider.availableSlots.length === 0) {
+        slotsList.innerHTML =
+          '<div class="col-span-full text-center text-gray-500">No available slots</div>';
+        return;
+      }
+
+      slotsList.innerHTML = provider.availableSlots
+        .map((slot) => {
+          const start = new Date(slot.start);
+          const end = new Date(slot.end);
+          const dateStr = start.toLocaleDateString();
+          const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          return `
+          <div class="card p-4 hover:shadow-lg transition border-2 border-transparent hover:border-blue-500">
+            <div class="text-2xl text-center mb-2">⏰</div>
+            <p class="font-bold text-center">${dateStr}</p>
+            <p class="text-center text-blue-600 font-semibold">${timeStr}</p>
+            <p class="text-xs text-gray-500 text-center mt-2">
+              Duration: ${Math.round((end - start) / (1000 * 60))} min
+            </p>
+            <button class="btn btn-primary btn-sm w-full mt-3" 
+              data-slot-id="${slot._id}" 
+              data-slot-start="${slot.start}" 
+              data-slot-end="${slot.end}">
+              Select
+            </button>
+          </div>
+        `;
+        })
+        .join('');
+
+      // Attach event listeners to all slot buttons
+      document.querySelectorAll('[data-slot-id]').forEach(button => {
+        button.addEventListener('click', () => {
+          const slotId = button.getAttribute('data-slot-id');
+          const startTime = new Date(button.getAttribute('data-slot-start'));
+          const endTime = new Date(button.getAttribute('data-slot-end'));
+          selectSlot(slotId, startTime, endTime);
+        });
+      });
+    }
+
+    // Select slot
+    function selectSlot(slotId, startTime, endTime) {
+      console.log('🔵 Slot selected:', { slotId, startTime, endTime });
+      selectedSlot = { id: slotId, start: startTime, end: endTime };
+      console.log('🔵 selectedSlot saved:', selectedSlot);
+
+      // Update summary
+      const service = selectedProvider.services[0];
+      const duration = Math.round((endTime - startTime) / (1000 * 60));
+
+      document.getElementById('summaryProvider').textContent = selectedProvider.name;
+      document.getElementById('summaryDateTime').textContent = startTime.toLocaleString();
+      document.getElementById('summaryDuration').textContent = duration + ' minutes';
+      document.getElementById('summaryPrice').textContent = '₹' + (service?.price || '0');
+
+      // Show step 3
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step2').style.display = 'none';
+      document.getElementById('step3').style.display = 'block';
+    }
+
+    // Confirm booking
+    document.getElementById('confirmBookBtn').addEventListener('click', async () => {
+      if (!selectedProvider || !selectedSlot) {
+        alert('Please select a provider and slot');
+        return;
+      }
+
+      const notes = document.getElementById('notes').value;
+      const btn = document.getElementById('confirmBookBtn');
+      const originalText = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Booking...';
+
+      console.log('🟢 Booking with:', {
+        providerId: selectedProvider.id,
+        slotId: selectedSlot.id,
+        notes
+      });
+
+      try {
+        await bookSlot(selectedProvider.id, selectedSlot.id, notes);
+
+        // Show success modal
+        document.getElementById('successModal').style.display = 'flex';
+      } catch (error) {
+        console.error('Error booking appointment:', error);
+        document.getElementById('errorAlert').innerHTML =
+          `<div class="alert alert-error">❌ ${error.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+
+    // Navigation functions
+    function goBack() {
+      selectedProvider = null;
+      document.getElementById('step1').style.display = 'block';
+      document.getElementById('step2').style.display = 'none';
+      document.getElementById('step3').style.display = 'none';
+    }
+
+    function goBackToSlots() {
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step2').style.display = 'block';
+      document.getElementById('step3').style.display = 'none';
+    }
+
+    // Initialize
+    loadProviders();
+  </script>
+</body>
+</html>

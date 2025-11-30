@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Smart Appointments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-gray-50">
+  <nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="../index.html" class="flex items-center space-x-2">
+        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <span class="text-white font-bold">📅</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Smart Appointments</h1>
+      </a>
+      <a href="../index.html" class="text-gray-600 hover:text-gray-800">← Back Home</a>
+    </div>
+  </nav>
+
+  <section class="min-h-screen flex items-center justify-center py-12 px-4">
+    <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8 animate-fade-in">
+      <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">Login</h2>
+
+      <div id="errorAlert"></div>
+
+      <form id="loginForm" class="space-y-6">
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-input"
+            placeholder="your@email.com"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-input"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        <button type="submit" class="w-full btn btn-primary btn-md">
+          Sign In
+        </button>
+      </form>
+
+      <p class="text-center text-gray-600 mt-6">
+        Don't have an account?
+        <a href="signup.html" class="text-blue-600 hover:text-blue-800 font-bold">Sign Up</a>
+      </p>
+
+      <hr class="my-6" />
+
+      <div class="bg-blue-50 p-4 rounded-lg">
+        <p class="text-sm font-semibold text-blue-900 mb-2">📝 Demo Credentials:</p>
+        <p class="text-xs text-blue-800 mb-1">
+          <strong>Provider:</strong> provider@example.com / provider123
+        </p>
+        <p class="text-xs text-blue-800">
+          <strong>Patient:</strong> patient@example.com / patient123
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <script src="../js/auth.js?v=1.1"></script>
+  <script>
+    const form = document.getElementById('loginForm');
+    const errorAlert = document.getElementById('errorAlert');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const btn = form.querySelector('button');
+      const originalText = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Signing in...';
+      errorAlert.innerHTML = '';
+
+      try {
+        await login(email, password);
+        const role = localStorage.getItem('userRole');
+        const dashboardUrl =
+          role === 'provider'
+            ? 'provider-dashboard.html'
+            : 'patient-dashboard.html';
+        window.location.href = dashboardUrl;
+      } catch (error) {
+        errorAlert.innerHTML = `
+          <div class="alert alert-error">
+            ❌ ${error.message}
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+  </script>
+</body>
+</html>

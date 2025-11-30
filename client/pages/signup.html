@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Smart Appointments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-gray-50">
+  <nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="../index.html" class="flex items-center space-x-2">
+        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <span class="text-white font-bold">📅</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Smart Appointments</h1>
+      </a>
+      <a href="../index.html" class="text-gray-600 hover:text-gray-800">← Back Home</a>
+    </div>
+  </nav>
+
+  <section class="min-h-screen flex items-center justify-center py-12 px-4">
+    <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8 animate-fade-in">
+      <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">Create Account</h2>
+
+      <div id="errorAlert"></div>
+
+      <form id="signupForm" class="space-y-4">
+        <div class="form-group">
+          <label for="name" class="form-label">Full Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            class="form-input"
+            placeholder="Chandan Kumar"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-input"
+            placeholder="your@email.com"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-input"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="phone" class="form-label">Phone Number</label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            class="form-input"
+            placeholder="+91 9833482780"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="role" class="form-label">I am a:</label>
+          <select id="role" name="role" class="form-select" required>
+            <option value="">-- Select Role --</option>
+            <option value="patient">Patient (Book Appointments)</option>
+            <option value="provider">Healthcare Provider (Doctor)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full btn btn-primary btn-md mt-6">
+          Create Account
+        </button>
+      </form>
+
+      <p class="text-center text-gray-600 mt-6">
+        Already have an account?
+        <a href="login.html" class="text-blue-600 hover:text-blue-800 font-bold">Sign In</a>
+      </p>
+    </div>
+  </section>
+
+  <script src="../js/auth.js?v=1.1"></script>
+  <script>
+    const form = document.getElementById('signupForm');
+    const errorAlert = document.getElementById('errorAlert');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const phone = document.getElementById('phone').value;
+      const role = document.getElementById('role').value;
+      const btn = form.querySelector('button');
+      const originalText = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Creating account...';
+      errorAlert.innerHTML = '';
+
+      try {
+        await signup(name, email, password, role, phone);
+        const dashboardUrl =
+          role === 'provider'
+            ? 'provider-dashboard.html'
+            : 'patient-dashboard.html';
+        window.location.href = dashboardUrl;
+      } catch (error) {
+        errorAlert.innerHTML = `
+          <div class="alert alert-error">
+            ❌ ${error.message}
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+  </script>
+</body>
+</html>

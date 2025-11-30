@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Appointment Booking System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-50">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <span class="text-white font-bold text-lg">📅</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Smart Appointments</h1>
+      </div>
+      <div id="navButtons" class="space-x-4"></div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <h2 class="text-5xl font-bold mb-4">Smart Appointment Booking System</h2>
+      <p class="text-xl mb-8 text-blue-100">
+        Connect with healthcare providers instantly. Schedule appointments in seconds.
+      </p>
+      <div id="heroBtns" class="flex justify-center gap-4"></div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4">
+      <h3 class="text-3xl font-bold text-center mb-12">Why Choose Us?</h3>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="p-6 bg-blue-50 rounded-lg hover:shadow-lg transition">
+          <div class="text-4xl mb-4">🔐</div>
+          <h4 class="text-xl font-bold mb-2">Secure & Safe</h4>
+          <p class="text-gray-600">Your data is protected with JWT authentication and bcrypt encryption.</p>
+        </div>
+        <div class="p-6 bg-green-50 rounded-lg hover:shadow-lg transition">
+          <div class="text-4xl mb-4">⚡</div>
+          <h4 class="text-xl font-bold mb-2">Fast Booking</h4>
+          <p class="text-gray-600">Atomic reservations prevent double-bookings and ensure reliability.</p>
+        </div>
+        <div class="p-6 bg-purple-50 rounded-lg hover:shadow-lg transition">
+          <div class="text-4xl mb-4">🎯</div>
+          <h4 class="text-xl font-bold mb-2">Easy to Use</h4>
+          <p class="text-gray-600">Simple interface for both patients and healthcare providers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-16 bg-gray-100">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h3 class="text-3xl font-bold mb-6">Ready to Book Your Appointment?</h3>
+      <p class="text-gray-600 mb-8 text-lg">
+        Get started today and join thousands of satisfied patients and providers.
+      </p>
+      <div id="ctaBtns" class="flex justify-center gap-4"></div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-8">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <p>&copy; 2025 Smart Appointment Booking System. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="js/auth.js"></script>
+  <script>
+    // Check if user is logged in and show appropriate buttons
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
+
+    function renderNav() {
+      const navBtns = document.getElementById('navButtons');
+      if (token) {
+        navBtns.innerHTML = `
+          <div class="flex items-center gap-4">
+            <span class="text-gray-600 font-medium">${localStorage.getItem('userName')}</span>
+            <button onclick="logout()" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Logout</button>
+          </div>
+        `;
+      } else {
+        navBtns.innerHTML = `
+          <a href="pages/login.html" class="px-4 py-2 text-blue-600 hover:text-blue-800 font-medium">Login</a>
+        `;
+      }
+    }
+
+    function renderHeroBtns() {
+      const heroBtns = document.getElementById('heroBtns');
+      if (token) {
+        if (userRole === 'provider') {
+          heroBtns.innerHTML = `
+            <a href="pages/provider-dashboard.html" class="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100">
+              Provider Dashboard
+            </a>
+          `;
+        } else {
+          heroBtns.innerHTML = `
+            <a href="pages/patient-dashboard.html" class="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100">
+              Patient Dashboard
+            </a>
+          `;
+        }
+      } else {
+        heroBtns.innerHTML = `
+          <a href="pages/login.html" class="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100">
+            Login
+          </a>
+          <a href="pages/signup.html" class="px-8 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-700">
+            Sign Up
+          </a>
+        `;
+      }
+    }
+
+    function renderCTA() {
+      const ctaBtns = document.getElementById('ctaBtns');
+      if (!token) {
+        ctaBtns.innerHTML = `
+          <a href="pages/signup.html" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">
+            Get Started Now
+          </a>
+        `;
+      }
+    }
+
+    renderNav();
+    renderHeroBtns();
+    renderCTA();
+  </script>
+</body>
+</html>

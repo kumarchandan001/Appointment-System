@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Dashboard - Smart Appointments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-gray-50">
+  <nav class="bg-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="../index.html" class="flex items-center space-x-2">
+        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <span class="text-white font-bold">📅</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Smart Appointments</h1>
+      </a>
+      <div class="flex items-center gap-4">
+        <span class="text-gray-600" id="userName"></span>
+        <a href="provider.html" class="text-blue-600 hover:text-blue-800 font-medium">Edit Profile</a>
+        <button onclick="logout()" class="btn btn-danger btn-sm">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold mb-8 text-gray-800">📊 Provider Dashboard</h1>
+
+    <div id="errorAlert"></div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="card p-6">
+        <div class="text-4xl mb-2">📅</div>
+        <div class="text-gray-600">Total Appointments</div>
+        <div class="text-3xl font-bold text-blue-600" id="totalCount">0</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-4xl mb-2">⏳</div>
+        <div class="text-gray-600">Pending</div>
+        <div class="text-3xl font-bold text-yellow-600" id="pendingCount">0</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-4xl mb-2">✅</div>
+        <div class="text-gray-600">Confirmed</div>
+        <div class="text-3xl font-bold text-green-600" id="confirmedCount">0</div>
+      </div>
+    </div>
+
+    <!-- Pending Appointments -->
+    <div class="card mb-8">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">⏳ Pending Appointments</h2>
+      </div>
+      <div class="card-body">
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Patient Name</th>
+                <th>Date & Time</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pendingTable">
+              <tr>
+                <td colspan="4" class="text-center text-gray-500">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmed Appointments -->
+    <div class="card mb-8">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">✅ Confirmed Appointments</h2>
+      </div>
+      <div class="card-body">
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Patient Name</th>
+                <th>Date & Time</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="confirmedTable">
+              <tr>
+                <td colspan="4" class="text-center text-gray-500">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Your Slots -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="text-2xl font-bold">📍 Your Available Slots</h2>
+      </div>
+      <div class="card-body">
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="slotsTable">
+              <tr>
+                <td colspan="3" class="text-center text-gray-500">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm Appointment?</h3>
+        <button class="modal-close" onclick="closeModal('confirmModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+        <button class="btn btn-success" id="confirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject Modal -->
+  <div id="rejectModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Reject Appointment?</h3>
+        <button class="modal-close" onclick="closeModal('rejectModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="rejectMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('rejectModal')">Cancel</button>
+        <button class="btn btn-danger" id="rejectBtn">Reject</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js?v=1.1"></script>
+  <script src="../js/provider.js?v=1.1"></script>
+  <script>
+    // Check authentication
+    requireAuth();
+
+    if (!isProvider()) {
+      window.location.href = 'login.html?error=provider_only';
+    }
+
+    const userName = localStorage.getItem('userName');
+    document.getElementById('userName').textContent = `👤 ${userName}`;
+
+    let allAppointments = [];
+
+    // Modal functions
+    function openModal(id) {
+      document.getElementById(id).style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    // Load appointments
+
+
+
+    
+    async function loadAppointments() {
+      console.log("Loading APpointmensts")
+      try {
+        const appointments = await getProviderAppointments();
+        allAppointments = appointments;
+
+        console.log("Loaded appointments",allAppointments)
+
+        const pending = appointments.filter((a) => a.status === 'pending');
+        const confirmed = appointments.filter((a) => a.status === 'confirmed');
+
+        // Update stats
+        document.getElementById('totalCount').textContent = appointments.length;
+        document.getElementById('pendingCount').textContent = pending.length;
+        document.getElementById('confirmedCount').textContent = confirmed.length;
+
+        // Pending table
+        const pendingTable = document.getElementById('pendingTable');
+        if (pending.length === 0) {
+          pendingTable.innerHTML =
+            '<tr><td colspan="4" class="text-center text-gray-500">No pending appointments</td></tr>';
+        } else {
+          pendingTable.innerHTML = pending
+            .map((apt) => {
+              const start = new Date(apt.start).toLocaleString();
+              return `
+              <tr>
+                <td>${apt.patientId.name}</td>
+                <td>${start}</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+                <td>
+                  <button class="btn btn-success btn-sm" onclick="showConfirm('${apt._id}', '${apt.patientId.name}')">✓ Confirm</button>
+                  <button class="btn btn-danger btn-sm" onclick="showReject('${apt._id}', '${apt.patientId.name}')">✗ Reject</button>
+                </td>
+              </tr>
+            `;
+            })
+            .join('');
+        }
+
+        // Confirmed table
+        const confirmedTable = document.getElementById('confirmedTable');
+        if (confirmed.length === 0) {
+          confirmedTable.innerHTML =
+            '<tr><td colspan="4" class="text-center text-gray-500">No confirmed appointments</td></tr>';
+        } else {
+          confirmedTable.innerHTML = confirmed
+            .map((apt) => {
+              const start = new Date(apt.start).toLocaleString();
+              const duration = apt.service?.durationMinutes || 0;
+              return `
+              <tr>
+                <td>${apt.patientId.name}</td>
+                <td>${start}</td>
+                <td>${duration} min</td>
+                <td><span class="badge badge-confirmed">Confirmed</span></td>
+              </tr>
+            `;
+            })
+            .join('');
+        }
+
+        // Load slots
+        loadSlots();
+      } catch (error) {
+        console.error('Error loading appointments:', error);
+        document.getElementById('errorAlert').innerHTML =
+          '<div class="alert alert-error">❌ Error loading appointments</div>';
+      }
+    }
+
+    // Load slots
+    async function loadSlots() {
+      try {
+        const providerId = localStorage.getItem('providerId');
+        console.log('loadSlots called with providerId:', providerId);
+        
+        if (!providerId) {
+          console.log('No providerId found in localStorage');
+          const slotsTable = document.getElementById('slotsTable');
+          slotsTable.innerHTML =
+            '<tr><td colspan="3" class="text-center text-gray-500">Provider ID not found. Please setup your profile first.</td></tr>';
+          return;
+        }
+
+        console.log('Fetching provider data for ID:', providerId);
+        const provider = await getProviderData(providerId);
+        console.log('Provider data received:', provider);
+        
+        const slotsTable = document.getElementById('slotsTable');
+
+        // Get all slots to display (show both booked and available)
+        let slots = provider.slots || provider.availableSlots || [];
+        console.log('Slots to display:', slots);
+        
+        if (!slots || slots.length === 0) {
+          slotsTable.innerHTML =
+            '<tr><td colspan="3" class="text-center text-gray-500">No slots available. <a href="provider.html" class="text-blue-600 hover:underline">Add slots</a></td></tr>';
+          return;
+        }
+
+        slotsTable.innerHTML = slots
+          .map((slot) => {
+            const start = new Date(slot.start).toLocaleString();
+            const end = new Date(slot.end).toLocaleString();
+            const status = slot.booked ? 'Booked' : 'Available';
+            const badgeClass = slot.booked ? 'badge-danger' : 'badge-success';
+            return `
+            <tr>
+              <td>${start}</td>
+              <td>${end}</td>
+              <td><span class="badge ${badgeClass}">${status}</span></td>
+            </tr>
+          `;
+          })
+          .join('');
+      } catch (error) {
+        console.error('Error loading slots:', error);
+        const slotsTable = document.getElementById('slotsTable');
+        slotsTable.innerHTML =
+          '<tr><td colspan="3" class="text-center text-gray-500">Error loading slots: ' + error.message + '</td></tr>';
+      }
+    }
+
+    // Show confirm modal
+    function showConfirm(appointmentId, patientName) {
+      const modal = document.getElementById('confirmModal');
+      document.getElementById('confirmMessage').textContent =
+        `Confirm this appointment with ${patientName}?`;
+
+      const btn = document.getElementById('confirmBtn');
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          await confirmAppointment(appointmentId);
+          closeModal('confirmModal');
+          loadAppointments();
+          document.getElementById('errorAlert').innerHTML =
+            '<div class="alert alert-success">✅ Appointment confirmed</div>';
+        } catch (error) {
+          document.getElementById('errorAlert').innerHTML =
+            `<div class="alert alert-error">❌ ${error.message}</div>`;
+        } finally {
+          btn.disabled = false;
+        }
+      };
+
+      openModal('confirmModal');
+    }
+
+    // Show reject modal
+    function showReject(appointmentId, patientName) {
+      const modal = document.getElementById('rejectModal');
+      document.getElementById('rejectMessage').textContent =
+        `Reject this appointment with ${patientName}?`;
+
+      const btn = document.getElementById('rejectBtn');
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          await rejectAppointment(appointmentId);
+          closeModal('rejectModal');
+          loadAppointments();
+          document.getElementById('errorAlert').innerHTML =
+            '<div class="alert alert-success">✅ Appointment rejected</div>';
+        } catch (error) {
+          document.getElementById('errorAlert').innerHTML =
+            `<div class="alert alert-error">❌ ${error.message}</div>`;
+        } finally {
+          btn.disabled = false;
+        }
+      };
+
+      openModal('rejectModal');
+    }
+
+    // Initialize
+    loadAppointments();
+
+    // Reload every 10 seconds
+    setInterval(loadAppointments, 10000);
+  </script>
+</body>
+</html>
