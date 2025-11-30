@@ -8,8 +8,18 @@ console.log('🔍 DEBUG: Current origin:', window.location.origin);
 console.log('🔍 DEBUG: Current hostname:', window.location.hostname);
 console.log('🔍 DEBUG: Current port:', window.location.port);
 
-// Global API_BASE - shared across all JS files
-window.API_BASE = 'http://localhost:4000/api';
+// Global API_BASE - read from environment variable or detect automatically
+// On Vercel: window.API_BASE will be set from environment variable
+// Locally: falls back to http://localhost:4000/api
+// For same-domain deployment: uses /api (relative URL)
+const detectedAPI = 
+  window.API_BASE_OVERRIDE || // Check if explicitly set by HTML
+  process.env.REACT_APP_API_URL || // Vercel environment variable
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:4000/api' 
+    : `${window.location.origin}/api`); // Use relative path for same-domain
+
+window.API_BASE = detectedAPI;
 
 // Debug: Log API base
 console.log('🔍 DEBUG: API_BASE set to:', window.API_BASE);
