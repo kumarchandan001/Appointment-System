@@ -9,20 +9,20 @@ console.log('🔍 DEBUG: Current hostname:', window.location.hostname);
 console.log('🔍 DEBUG: Current port:', window.location.port);
 
 // Global API_BASE - read from environment variable or detect automatically
-// On Vercel: window.API_BASE will be set from environment variable
+// On Vercel: reads from window.__ENV__ injected by HTML or meta tag
 // Locally: falls back to http://localhost:4000/api
-// For same-domain deployment: uses /api (relative URL)
 const detectedAPI = 
   window.API_BASE_OVERRIDE || // Check if explicitly set by HTML
-  process.env.REACT_APP_API_URL || // Vercel environment variable
+  (typeof window !== 'undefined' && window.__ENV__ && window.__ENV__.REACT_APP_API_URL) || // Vercel injected
   (window.location.hostname === 'localhost' 
     ? 'http://localhost:4000/api' 
-    : `${window.location.origin}/api`); // Use relative path for same-domain
+    : 'https://appointment-system-4-wo8h.onrender.com/api'); // Production backend URL
 
 window.API_BASE = detectedAPI;
 
 // Debug: Log API base
 console.log('🔍 DEBUG: API_BASE set to:', window.API_BASE);
+console.log('🔍 DEBUG: window.__ENV__:', window.__ENV__);
 
 /**
  * Get authorization headers with JWT token
